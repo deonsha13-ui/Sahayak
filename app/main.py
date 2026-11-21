@@ -84,11 +84,24 @@ def health():
         "ok": True,
         "gnani_key_loaded": bool(os.getenv("GNANI_API_KEY")),
         "llm_key_loaded": bool(os.getenv("LLM_API_KEY")),
-        "model": os.getenv("GEMINI_MODEL", ""),
+        "groq_key_loaded": bool(os.getenv("GROQ_API_KEY")),
+        "llm_provider": os.getenv("LLM_PROVIDER", ""),
+        "model": os.getenv("GEMINI_MODEL", "") or os.getenv("GROQ_MODEL", ""),
         "languages": list(i18n.SUPPORTED),
         "tts_cache": tts_cache.stats(),
         "encryption_key": storage.key_fingerprint(),
     }
+
+
+@app.get("/api/test-extract")
+async def api_test_extract(text: str = "Beneficiary ID is one two three four."):
+    import traceback
+    from app.extractor import extract
+    try:
+        res = await extract(text)
+        return {"ok": True, "result": res}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc), "trace": traceback.format_exc()}
 
 
 FRONTEND_DIST = ROOT / "frontend" / "dist"
