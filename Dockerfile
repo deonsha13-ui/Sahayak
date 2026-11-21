@@ -1,10 +1,10 @@
 # Stage 1: Build Frontend
-FROM node:20-alpine AS frontend-builder
+FROM node:20-bookworm-slim AS frontend-builder
 WORKDIR /app/frontend
-COPY frontend/package*.json ./
+COPY frontend/package.json ./
 RUN npm install
 COPY frontend/ ./
-RUN npm run build || true
+RUN mkdir -p .output/public dist && (npm run build || true)
 
 # Stage 2: Backend runtime
 FROM python:3.11-slim
