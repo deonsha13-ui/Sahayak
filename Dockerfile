@@ -5,10 +5,7 @@ COPY frontend/package.json ./
 RUN npm install
 COPY frontend/ ./
 RUN npm run build || true
-RUN mkdir -p .output/public && \
-    if [ ! -f .output/public/index.html ]; then \
-      find .output -name "*.html" -exec cp {} .output/public/ \; 2>/dev/null || true; \
-    fi
+RUN mkdir -p dist && mkdir -p .output/public
 
 # Stage 2: Backend runtime
 FROM python:3.11-slim
@@ -23,6 +20,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
+COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist
 COPY --from=frontend-builder /app/frontend/.output /app/frontend/.output
 
 RUN mkdir -p app/data

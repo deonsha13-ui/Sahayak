@@ -91,9 +91,9 @@ def health():
     }
 
 
-FRONTEND_DIST = ROOT / "frontend" / ".output" / "public"
+FRONTEND_DIST = ROOT / "frontend" / "dist"
 if not FRONTEND_DIST.exists():
-    FRONTEND_DIST = ROOT / "frontend" / "dist"
+    FRONTEND_DIST = ROOT / "frontend" / ".output" / "public"
 
 
 @app.get("/")
