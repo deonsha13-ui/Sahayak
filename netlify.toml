@@ -1,0 +1,6 @@
+# The web app lives in the frontend/ folder, so Netlify must build from there.
+[build]
+  base = "frontend"
+  command = "npm install && npm run build"
+  publish = "dist"
+
