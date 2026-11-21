@@ -111,9 +111,7 @@ if not FRONTEND_DIST.exists():
 
 @app.get("/")
 def index():
-    if FRONTEND_DIST.exists() and (FRONTEND_DIST / "index.html").exists():
-        return FileResponse(FRONTEND_DIST / "index.html")
-    return RedirectResponse("/talk")
+    return RedirectResponse("/talk", status_code=307)
 
 
 @app.get("/talk")

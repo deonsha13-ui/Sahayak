@@ -88,6 +88,22 @@ class Session:
     def _tokens(self, text: str) -> set:
         return set(_TOKEN_RE.findall(text.lower()))
 
+    _PAUSE_RE = re.compile(
+        r"(?:ఒక్క\s*నిమిషం|ఒక\s*నిమిషం|నిమిషం|ఆగండి|ఆగు|"
+        r"एक\s*मिनट|ज़रा\s*रुको|रुको|रुकिए|थोड़ा\s*रुक|"
+        r"ஒரு\s*நிமிடம்|இருங்க|பொறுங்கள்|"
+        r"ಒಂದು\s*ನಿಮಿಷ|ತಾಳಿ|"
+        r"ഒരു\s*നിമിഷം|"
+        r"এক\s*মিনিট|একটু\s*দাঁড়ান|"
+        r"एक\s*मिनिट|थांबा|"
+        r"\bone\s*minute\b|\bjust\s*a\s*minute\b|\bwait\s*a\s*minute\b|\bwait\s*a\s*second\b|"
+        r"\bgive\s*me\s*a\s*second\b|\bgive\s*me\s*a\s*minute\b|\bhold\s*on\b|\bjust\s*a\s*sec\b|\bwait\b)",
+        re.IGNORECASE,
+    )
+
+    def _is_pause(self, text: str) -> bool:
+        return bool(self._PAUSE_RE.search(text))
+
     def _missing(self):
         for field in ORDER:
             if field == "vaccinations_due":
@@ -206,6 +222,10 @@ class Session:
             return self.t("already_saved")
 
         switch_note = self._follow_language(text)
+
+        # 0) check conversational pause / wait phrases ("one minute", "oka nimisham", "ruko")
+        if self._is_pause(text) and not re.search(r"\d", text):
+            return f"{switch_note} {self.t('take_your_time')}".strip() if switch_note else self.t("take_your_time")
 
         if self.state == "readback":
             if self._is_confirm(text):
