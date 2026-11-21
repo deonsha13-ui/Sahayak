@@ -616,9 +616,14 @@ if FRONTEND_DIST.exists():
 
     @app.get("/{full_path:path}")
     def spa_fallback(full_path: str):
+        if full_path.startswith(("api", "ws", "talk", "health")):
+            raise HTTPException(status_code=404, detail="Not found")
         file_path = FRONTEND_DIST / full_path
         if file_path.is_file():
             return FileResponse(file_path)
+        sub_index = file_path / "index.html"
+        if sub_index.is_file():
+            return FileResponse(sub_index)
         index_file = FRONTEND_DIST / "index.html"
         if index_file.exists():
             return FileResponse(index_file)
