@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>SAHAYAK — Voice-First Field Register</title>
+<style>
+  :root{
+    --ink:#0d1b21; --panel:#12262e; --panel-2:#17323c; --line:#22454f;
+    --text:#e8f3f1; --muted:#8fb3b0; --teal:#3ddad7; --saffron:#ffb347;
+    --danger:#ff6b6b; --ok:#54d98c;
+    font-family:"Segoe UI",system-ui,-apple-system,"Noto Sans",sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 20% -10%,#123039 0%,var(--ink) 55%);color:var(--text);min-height:100vh}
+  header{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .brand{display:flex;flex-direction:column}
+  .brand b{font-size:19px;letter-spacing:.16em}
+  .brand span{font-size:11.5px;color:var(--muted)}
+  .spacer{flex:1}
+  select,button{font:inherit}
+  select{background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:9px;padding:8px 10px}
+  .pill{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);
+    border:1px solid var(--line);border-radius:999px;padding:6px 11px;background:var(--panel)}
+  .dot{width:8px;height:8px;border-radius:50%;background:#6b7f85}
+  .dot.on{background:var(--ok);box-shadow:0 0 9px var(--ok)}
+  .dot.warn{background:var(--saffron)}
+
+  main{display:grid;grid-template-columns:1.55fr 1fr;gap:16px;padding:16px 20px 168px;max-width:1180px;margin:0 auto}
+  @media (max-width:860px){ main{grid-template-columns:1fr;padding-bottom:176px} }
+
+  .card{background:linear-gradient(180deg,var(--panel) 0%,#102128 100%);border:1px solid var(--line);
+    border-radius:16px;padding:16px}
+  .card h2{margin:0 0 12px;font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);font-weight:600}
+
+  #log{height:min(52vh,430px);overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding-right:4px}
+  .msg{max-width:88%;padding:10px 13px;border-radius:13px;font-size:14.5px;line-height:1.45;white-space:pre-wrap}
+  .msg.agent{background:var(--panel-2);border:1px solid var(--line);align-self:flex-start;border-bottom-left-radius:4px}
+  .msg.user{background:#1f4d43;border:1px solid #2c6b5d;align-self:flex-end;border-bottom-right-radius:4px}
+  .msg.sys{align-self:center;font-size:12px;color:var(--muted);background:none;padding:2px}
+  .msg.alert{background:#3a1c1f;border:1px solid #7a2f36;align-self:stretch;max-width:100%}
+
+  .fields{display:grid;gap:8px}
+  .field{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 12px;
+    background:var(--panel-2);border:1px solid var(--line);border-radius:11px;font-size:13.5px}
+  .field .k{color:var(--muted)}
+  .field .v{font-weight:600;text-align:right;word-break:break-word}
+  .field.done{border-color:#2f6b57}
+  .field.done .v{color:var(--teal)}
+  .field.flag{border-color:#7a2f36;background:#2a1a1d}
+
+  .banner{display:none;margin-top:12px;padding:12px 14px;border-radius:12px;background:#3a1c1f;
+    border:1px solid #a33a44;color:#ffd9d9;font-size:13.5px;line-height:1.4}
+  .banner.show{display:block}
+  .banner b{color:#fff}
+
+  #saveCard{display:none;margin-top:12px;border:1px solid #2f6b57;background:#122c26;border-radius:12px;padding:12px 14px}
+  #saveCard.show{display:block}
+  #saveCard p{margin:0 0 10px;font-size:13.5px;color:#c7e6da}
+  .btn{background:var(--teal);color:#062226;border:0;border-radius:10px;padding:11px 18px;
+    font-weight:700;cursor:pointer}
+  .btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line);font-weight:500}
+  .btn:active{transform:translateY(1px)}
+
+  footer{position:fixed;left:0;right:0;bottom:0;padding:12px 20px 16px;
+    background:linear-gradient(180deg,rgba(13,27,33,.55),rgba(13,27,33,.98) 42%);backdrop-filter:blur(7px)}
+  .ptt-wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:9px}
+  #ptt{width:100%;border:0;border-radius:16px;padding:20px 18px;font-size:17.5px;font-weight:800;
+    letter-spacing:.03em;color:#3a1e00;cursor:pointer;user-select:none;touch-action:none;
+    background:linear-gradient(180deg,#ffce7a,#ffb347);box-shadow:0 10px 26px rgba(255,179,71,.22)}
+  #ptt.live{background:linear-gradient(180deg,#ff8a80,#ff6b6b);color:#2b0000;
+    box-shadow:0 0 0 4px rgba(255,107,107,.18),0 10px 26px rgba(255,107,107,.25)}
+  #ptt:disabled{filter:grayscale(.6);opacity:.6;cursor:not-allowed}
+  .row{display:flex;gap:9px;align-items:center}
+  .row input{flex:1;background:var(--panel);border:1px solid var(--line);color:var(--text);
+    border-radius:11px;padding:11px 13px;font-size:14px}
+  .row input::placeholder{color:#6e8c8a}
+  .hint{font-size:11.5px;color:var(--muted);text-align:center}
+  #followUps{display:none;margin-top:12px}
+  #followUps.show{display:block}
+  #followUps ul{margin:8px 0 0;padding-left:18px;font-size:13px;color:#cfe2df;line-height:1.6}
+
+  /* browsers only allow audio after a user gesture, so the session starts here */
+  #gate{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;
+    background:rgba(9,20,25,.92);backdrop-filter:blur(4px);padding:22px}
+  #gate.gone{display:none}
+  #gate .box{max-width:420px;text-align:center;background:var(--panel);border:1px solid var(--line);
+    border-radius:18px;padding:28px 24px}
+  #gate b{display:block;font-size:22px;letter-spacing:.16em;margin-bottom:6px}
+  #gate p{margin:0 0 18px;font-size:13.5px;line-height:1.55;color:var(--muted)}
+  #gate .btn{padding:14px 26px;font-size:15.5px}
+</style>
+</head>
+<body>
+<div id="gate">
+  <div class="box">
+    <b>SAHAYAK</b>
+    <p>Voice-first field register for ASHA workers.</p>
+    <button class="btn" id="startBtn">Tap to start</button>
+    <p style="margin:14px 0 0">Allow the microphone when your browser asks. You can also type instead of speaking.</p>
+  </div>
+</div>
+<header>
+  <div class="brand"><b>SAHAYAK</b><span>Voice-first field register for ASHA workers</span></div>
+  <div class="spacer"></div>
+  <span class="pill"><span class="dot" id="dot"></span><span id="status">connecting…</span></span>
+  <select id="lang" title="Language (switches automatically when you speak)">
+    <option value="en">English</option><option value="hi">हिन्दी</option>
+    <option value="ta">தமிழ்</option>
+    <option value="te">తెలుగు</option><option value="kn">ಕನ್ನಡ</option>
+    <option value="ml">മലയാളം</option><option value="bn">বাংলা</option>
+    <option value="mr">मराठी</option>
+  </select>
+  <button class="btn ghost" id="newVisit" title="Start a fresh visit">New visit</button>
+</header>
+
+<main>
+  <section class="card">
+    <h2>Conversation</h2>
+    <div id="log"></div>
+  </section>
+
+  <section class="card">
+    <h2>Visit record</h2>
+    <div class="fields" id="fields"></div>
+    <div class="banner" id="dangerBanner"></div>
+    <div id="saveCard">
+      <p>Readback complete. Confirm only after the worker has verified every field.</p>
+      <button class="btn" id="saveBtn">Confirm &amp; save</button>
+    </div>
+    <div id="followUps">
+      <h2 style="margin:14px 0 0">Follow-ups created</h2>
+      <ul id="followUpList"></ul>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="ptt-wrap">
+    <button id="ptt" disabled>Hold to talk (or Space)</button>
+    <div class="row">
+      <input id="typed" placeholder="No microphone? Type the sentence and press Enter…" autocomplete="off">
+      <button class="btn ghost" id="sendTyped">Send</button>
+    </div>
+    <div class="hint">Release to transmit. Speak in your language — ANC, PNC, weight, vaccines and next visit date are filled in automatically.</div>
+  </div>
+</footer>
+
+<script>
+(() => {
+  "use strict";
+
+  const FIELDS = [
+    ["beneficiary_id", "Beneficiary ID"],
+    ["visit_type", "Visit type"],
+    ["weight_kg", "Weight (kg)"],
+    ["vaccinations_due", "Vaccinations due"],
+    ["next_visit_date", "Next visit"]
+  ];
+  const ORDER = ["beneficiary_id","visit_type","weight_kg","vaccinations_due","next_visit_date"];
+
+  const $ = (id) => document.getElementById(id);
+  const log = $("log"), ptt = $("ptt"), langSel = $("lang"),
+        statusEl = $("status"), dot = $("dot"), typed = $("typed"),
+        saveCard = $("saveCard"), banner = $("dangerBanner"),
+        followUps = $("followUps"), followUpList = $("followUpList");
+
+  const state = { ws:null, lang:langSel.value, ptt:false, micStream:null,
+                  micCtx:null, proc:null, playCtx:null, nextTime:0, sources:[],
+                  pending:[], values:{}, danger:[], readback:false };
+
+  // ---------------- UI helpers ----------------
+  function setStatus(text, cls){
+    statusEl.textContent = text;
+    dot.className = "dot" + (cls ? " " + cls : "");
+  }
+  function addMsg(role, text){
+    if(!text) return;
+    const el = document.createElement("div");
+    el.className = "msg " + role;
+    el.textContent = text;
+    el.dir = "auto";
+    log.appendChild(el);
+    log.scrollTop = log.scrollHeight;
+    return el;
+  }
+  function messageFor(m){
+    const v = state.values[m.field];
+    if(m.field === "vaccinations_due") return (v && v.length) ? v.join(", ") : "—";
+    if(m.field === "weight_kg") return (v === null || v === undefined) ? "—" : v + " kg";
+    return (v === null || v === undefined || v === "") ? "—" : String(v);
+  }
+  function renderFields(){
+    const wrap = $("fields");
+    wrap.innerHTML = "";
+    FIELDS.forEach(([key,label]) => {
+      const v = state.values[key];
+      const filled = (key === "vaccinations_due") ? Array.isArray(v) : (v !== null && v !== undefined && v !== "");
+      const row = document.createElement("div");
+      row.className = "field" + (filled ? " done" : "");
+      row.innerHTML = `<span class="k"></span><span class="v"></span>`;
+      row.querySelector(".k").textContent = label;
+      row.querySelector(".v").textContent = messageFor({field:key});
+      wrap.appendChild(row);
+    });
+  }
+  function showDanger(label){
+    state.danger.push(label);
+    banner.classList.add("show");
+    banner.textContent = "";
+    state.danger.forEach((d, i) => {
+      const line = document.createElement("div");
+      line.innerHTML = "<b>⚠ Danger sign:</b> ";
+      line.appendChild(document.createTextNode(d));
+      banner.appendChild(line);
+    });
+    addMsg("alert", "⚠ " + label);
+  }
+  function renderFollowUps(items){
+    if(!items || !items.length) return;
+    followUpList.innerHTML = "";
+    items.forEach(fu => {
+      const li = document.createElement("li");
+      const due = fu.due_date ? " — " + fu.due_date : "";
+      li.textContent = `${fu.kind.replace(/_/g," ")}${due}${fu.note ? " · " + fu.note : ""}`;
+      followUpList.appendChild(li);
+    });
+    followUps.classList.add("show");
+  }
+
+  // ---------------- audio out (24 kHz PCM16) ----------------
+  function playCtxReset(){
+    if(!state.playCtx) state.playCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if(state.playCtx.state === "suspended"){
+      state.playCtx.resume().then(flushAudio).catch(() => {});
+    }
+    return state.playCtx;
+  }
+  function stopAudio(){
+    state.sources.forEach(s => { try{ s.stop(); }catch(e){} });
+    state.sources = [];
+    state.pending = [];
+    state.nextTime = 0;
+  }
+  // Audio that arrived before the browser let us play it.
+  function flushAudio(){
+    if(!state.playCtx || state.playCtx.state !== "running" || !state.pending.length) return;
+    const parts = state.pending;
+    state.pending = [];
+    let total = 0;
+    parts.forEach(p => total += p.length);
+    const all = new Int16Array(total);
+    let at = 0;
+    parts.forEach(p => { all.set(p, at); at += p.length; });
+    playPcm16(all);
+  }
+  function unlockAudio(){
+    const ctx = playCtxReset();
+    if(ctx.state === "suspended") ctx.resume().then(flushAudio).catch(() => {});
+    else flushAudio();
+  }
+  function playPcm16(int16){
+    if(state.ptt) return; // Mute playback while user is speaking (prevents overlapping and echo)
+    const ctx = playCtxReset();
+    if(!int16.length) return;
+    if(ctx.state !== "running"){ state.pending.push(int16); return; }
+    const f32 = new Float32Array(int16.length);
+    for(let i=0;i<int16.length;i++) f32[i] = int16[i] / 32768;
+    const buf = ctx.createBuffer(1, f32.length, 24000);
+    buf.copyToChannel(f32, 0);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(ctx.destination);
+    const at = Math.max(ctx.currentTime, state.nextTime);
+    src.start(at);
+    state.nextTime = at + buf.duration;
+    state.sources.push(src);
+  }
+  function b64ToInt16(b64){
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+    return new Int16Array(bytes.buffer, 0, bytes.byteLength >> 1);
+  }
+
+  // ---------------- microphone (16 kHz PCM16) ----------------
+  function toInt16(f32){
+    const out = new Int16Array(f32.length);
+    for(let i=0;i<f32.length;i++){
+      const s = Math.max(-1, Math.min(1, f32[i]));
+      out[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+    }
+    return out;
+  }
+  function downsample(buf, from, to){
+    if(from === to) return buf;
+    const ratio = from / to, len = Math.floor(buf.length / ratio);
+    const out = new Float32Array(len);
+    for(let i=0;i<len;i++) out[i] = buf[Math.floor(i * ratio)];
+    return out;
+  }
+  async function initMic(){
+    if(state.micCtx) return true;
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return false;
+    try{
+      state.micStream = await navigator.mediaDevices.getUserMedia({
+        audio:{ channelCount:1, echoCancellation:true, noiseSuppression:true, autoGainControl:true }
+      });
+      state.micCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const src = state.micCtx.createMediaStreamSource(state.micStream);
+
+      // High-pass filter at 85 Hz strips out low fan humming, AC rumble, and table/phone vibrations
+      const hpFilter = state.micCtx.createBiquadFilter();
+      hpFilter.type = "highpass";
+      hpFilter.frequency.value = 85;
+
+      state.proc = state.micCtx.createScriptProcessor(4096, 1, 1);
+      state.proc.onaudioprocess = (ev) => {
+        if(!state.ptt || !state.ws || state.ws.readyState !== 1) return;
+        let input = ev.inputBuffer.getChannelData(0);
+
+        // Soft noise gate: attenuate faint background murmur so it does not trigger false STT
+        let sum = 0;
+        for(let i = 0; i < input.length; i++) sum += input[i] * input[i];
+        const rms = Math.sqrt(sum / input.length);
+        if(rms < 0.006) {
+          for(let i = 0; i < input.length; i++) input[i] *= 0.1;
+        }
+
+        input = downsample(input, state.micCtx.sampleRate, 16000);
+        const pcm = toInt16(input);
+        state.ws.send(pcm.buffer);
+      };
+      const mute = state.micCtx.createGain();
+      mute.gain.value = 0;
+      src.connect(hpFilter);
+      hpFilter.connect(state.proc);
+      state.proc.connect(mute);
+      mute.connect(state.micCtx.destination);
+      return true;
+    }catch(err){
+      addMsg("sys", "Microphone unavailable (" + err.name + "). Use the text box below.");
+      return false;
+    }
+  }
+
+  // ---------------- websocket ----------------
+  function connect(){
+    const proto = location.protocol === "https:" ? "wss" : "ws";
+    const ws = new WebSocket(`${proto}://${location.host}/ws?lang=${encodeURIComponent(state.lang)}`);
+    state.ws = ws;
+    setStatus("connecting…", "warn");
+
+    ws.onopen = () => { setStatus("connected", "on"); ptt.disabled = false; };
+    ws.onclose = () => { setStatus("disconnected", "warn"); ptt.disabled = true; };
+    ws.onerror = () => setStatus("connection error", "warn");
+
+    ws.onmessage = (ev) => {
+      let m;
+      try{ m = JSON.parse(ev.data); }catch(e){ return; }
+      switch(m.type){
+        case "session_ready":
+          if(m.language){ state.lang = m.language; langSel.value = m.language; }
+          break;
+        case "agent_text":
+          addMsg("agent", m.text);
+          break;
+        case "transcript_final":
+          addMsg("user", m.text);
+          break;
+        case "transcript_partial":
+          break;
+        case "field_update":
+          if(ORDER.includes(m.field)){ state.values[m.field] = m.value; renderFields(); }
+          break;
+        case "danger_alert":
+          showDanger(m.message || m.sign);
+          break;
+        case "readback_start":
+          state.readback = true;
+          saveCard.classList.add("show");
+          break;
+        case "record_saved":
+          saveCard.classList.remove("show");
+          state.readback = false;
+          addMsg("sys", "Record saved" + (m.record && m.record.visit_id ? " · " + m.record.visit_id.slice(0,8) : ""));
+          if(m.follow_ups) renderFollowUps(m.follow_ups);
+          break;
+        case "audio_start":
+          if(state.ptt) break;
+          stopAudio(); // Cut any previous speech so voices never overlap
+          break;
+        case "audio":
+          if(!state.ptt && m.data) playPcm16(b64ToInt16(m.data));
+          break;
+        case "audio_end":
+          break;
+        case "processing":
+          setStatus("transcribing…", "warn");
+          break;
+        case "speech_start":
+          setStatus("hearing you…", "on");
+          break;
+        case "ptt_ready":
+          setStatus("listening", "on");
+          break;
+        case "stt_error":
+          setStatus("speech error", "warn");
+          addMsg("sys", "Speech-to-text: " + (m.message || "unavailable"));
+          break;
+        case "tts_error":
+          addMsg("sys", "Text-to-speech: " + (m.message || "unavailable"));
+          break;
+        case "language_set":
+          state.lang = m.language;
+          langSel.value = m.language;
+          setStatus("language: " + (m.name || m.language), "on");
+          if(m.auto) addMsg("sys", "Switched to " + (m.name || m.language) + " automatically");
+          break;
+        case "error":
+          addMsg("sys", m.message || "error");
+          break;
+      }
+    };
+  }
+
+  // ---------------- push to talk ----------------
+  async function startPtt(){
+    if(state.ptt) return;
+    if(!state.ws || state.ws.readyState !== 1) return;
+    stopAudio();
+    const ok = await initMic();
+    if(!ok) return;
+    if(state.micCtx.state === "suspended") await state.micCtx.resume();
+    state.ptt = true;
+    ptt.classList.add("live");
+    ptt.textContent = "Listening… release to send";
+    setStatus("listening", "on");
+    state.ws.send(JSON.stringify({ type:"ptt_start" }));
+  }
+  function stopPtt(){
+    if(!state.ptt) return;
+    state.ptt = false;
+    ptt.classList.remove("live");
+    ptt.textContent = "Hold to talk (or Space)";
+    setStatus("sending…", "warn");
+    if(state.ws && state.ws.readyState === 1){
+      state.ws.send(JSON.stringify({ type:"ptt_end" }));
+    }
+  }
+
+  ptt.addEventListener("pointerdown", (e) => { e.preventDefault(); startPtt(); });
+  ptt.addEventListener("pointerup", (e) => { e.preventDefault(); stopPtt(); });
+  ptt.addEventListener("pointerleave", () => stopPtt());
+  ptt.addEventListener("pointercancel", () => stopPtt());
+
+  document.addEventListener("keydown", (e) => {
+    if(e.code !== "Space" || e.repeat) return;
+    if(document.activeElement === typed) return;
+    e.preventDefault();
+    startPtt();
+  });
+  document.addEventListener("keyup", (e) => {
+    if(e.code !== "Space") return;
+    if(document.activeElement === typed) return;
+    e.preventDefault();
+    stopPtt();
+  });
+
+  function sendTyped(){
+    const text = typed.value.trim();
+    if(!text || !state.ws || state.ws.readyState !== 1) return;
+    typed.value = "";
+    stopAudio();
+    state.ws.send(JSON.stringify({ type:"text_input", text }));
+  }
+  $("sendTyped").addEventListener("click", sendTyped);
+  typed.addEventListener("keydown", (e) => { if(e.key === "Enter") sendTyped(); });
+
+  $("saveBtn").addEventListener("click", () => {
+    if(state.ws && state.ws.readyState === 1) state.ws.send(JSON.stringify({ type:"confirm_save" }));
+  });
+
+  $("newVisit").addEventListener("click", () => location.reload());
+
+    langSel.addEventListener("change", () => {
+    state.lang = langSel.value;
+    if(state.ws && state.ws.readyState === 1){
+      state.ws.send(JSON.stringify({ type:"set_language", language: state.lang, manual: true }));
+    }
+  });
+
+  // The session starts on a tap: that gesture unlocks audio playback and the mic.
+  function boot(){
+    unlockAudio();
+    initMic();
+    $("gate").classList.add("gone");
+    if(!state.ws) connect();
+  }
+  $("startBtn").addEventListener("click", boot);
+  document.addEventListener("keydown", (e) => {
+    if(e.code === "Space" || e.key === "Enter"){ if(!$("gate").classList.contains("gone")) boot(); }
+  });
+
+  renderFields();
+})();
+</script>
+</body>
+</html>

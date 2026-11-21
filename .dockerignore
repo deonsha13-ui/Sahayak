@@ -1,0 +1,12 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.git/
+.env
+sahayak-backend.zip
+frontend/node_modules/
+*.db
+*.db-wal
+*.db-shm
+app/data/fernet.key

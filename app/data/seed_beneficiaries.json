@@ -1,0 +1,32 @@
+[
+  {
+    "beneficiary_id": "RCH-2026-000101",
+    "name": "Sunita Devi",
+    "village": "Rampur"
+  },
+  {
+    "beneficiary_id": "RCH-2026-000102",
+    "name": "Meena Kumari",
+    "village": "Rampur"
+  },
+  {
+    "beneficiary_id": "RCH-2026-000103",
+    "name": "Lakshmi Bai",
+    "village": "Gopalpur"
+  },
+  {
+    "beneficiary_id": "RCH-2026-000104",
+    "name": "Anjali Sahu",
+    "village": "Gopalpur"
+  },
+  {
+    "beneficiary_id": "RCH-2026-000105",
+    "name": "Rekha Yadav",
+    "village": "Bhimpur"
+  },
+  {
+    "beneficiary_id": "RCH-2026-000106",
+    "name": "Kavita Patil",
+    "village": "Bhimpur"
+  }
+]
